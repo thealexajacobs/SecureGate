@@ -42,7 +42,11 @@ export async function POST(request: Request) {
         },
       });
 
-      await sendPasswordResetEmail(email, token);
+      try {
+        await sendPasswordResetEmail(email, token);
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+      }
     }
 
     return Response.json({

@@ -3,7 +3,13 @@ import { render } from "@react-email/render";
 import { VerificationEmail } from "@/emails/verification-email";
 import { ResetPasswordEmail } from "@/emails/reset-password-email";
 
-const resend = new Resend(process.env.RESEND_API_KEY ?? "");
+function getResend(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("RESEND_API_KEY is not set in environment variables");
+  }
+  return new Resend(apiKey || "");
+}
 
 async function sendEmail(
   to: string,
@@ -12,19 +18,32 @@ async function sendEmail(
 ): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.warn(
-      "RESEND_API_KEY is not set. Skipping email to", to
+      `RESEND_API_KEY is not set. Skipping email to ${to}`
     );
     return;
   }
 
-  const html = await render(component);
+  try {
+    const html = await render(component);
+    console.log(`Sending email to ${to} with subject: ${subject}`);
 
-  await resend.emails.send({
-    from: "SecureGate <noreply@securegate.auth>",
-    to,
-    subject,
-    html,
-  });
+    const { data, error } = await getResend().emails.send({
+      from: "SecureGate <onboarding@resend.dev>",
+      to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error(`Resend API error for ${to}:`, error);
+      throw new Error(`Failed to send email: ${error.message}`);
+    }
+
+    console.log(`Email sent successfully to ${to}:`, data);
+  } catch (error) {
+    console.error(`Failed to send email to ${to}:`, error);
+    throw new Error(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 export async function sendVerificationEmail(
@@ -49,3 +68,4 @@ export async function sendPasswordResetEmail(
     <ResetPasswordEmail token={token} />
   );
 }
+

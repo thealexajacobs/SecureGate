@@ -14,6 +14,16 @@ export function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
 
+  function validateForm(name: string, email: string, password: string): string | null {
+    if (!email.includes("@")) {
+      return "Please enter a valid email address.";
+    }
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long.";
+    }
+    return null;
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -23,6 +33,14 @@ export function SignUpForm() {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    // Validate inputs before sending to the server
+    const validationError = validateForm(name, email, password);
+    if (validationError) {
+      setError(validationError);
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/register", {

@@ -1,24 +1,67 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { render } from "@react-email/render";
 import { VerificationEmail } from "@/emails/verification-email";
 import { ResetPasswordEmail } from "@/emails/reset-password-email";
 
-function getTransporter() {
+type EmailProvider = "nodemailer" | "resend";
+
+function getProvider(): EmailProvider | null {
+  const provider = process.env.EMAIL_PROVIDER?.toLowerCase().trim();
+  if (provider === "resend") return "resend";
+  return "nodemailer";
+}
+
+async function sendViaNodemailer(
+  to: string,
+  subject: string,
+  html: string
+): Promise<void> {
   const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
   if (!host || !user || !pass) {
-    return null;
+    console.warn("SMTP not configured (SMTP_HOST, SMTP_USER, SMTP_PASS). Skipping email to " + to);
+    return;
   }
 
-  return nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     host,
-    port: port ? Number(port) : 587,
-    secure: port ? Number(port) === 465 : false,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: Number(process.env.SMTP_PORT) === 465,
     auth: { user, pass },
   });
+
+  const from = process.env.EMAIL_FROM || "SecureGate <noreply@securegate.app>";
+
+  const info = await transporter.sendMail({ from, to, subject, html });
+  console.log(`Email sent via Nodemailer to ${to}:`, info.messageId);
+}
+
+async function sendViaResend(
+  to: string,
+  subject: string,
+  html: string
+): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("RESEND_API_KEY not set. Skipping email to " + to);
+    return;
+  }
+
+  const { data, error } = await new Resend(apiKey).emails.send({
+    from: process.env.EMAIL_FROM || "SecureGate <onboarding@resend.dev>",
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    throw new Error("Resend error: " + error.message);
+  }
+
+  console.log("Email sent via Resend to " + to + ":", data);
 }
 
 async function sendEmail(
@@ -26,29 +69,17 @@ async function sendEmail(
   subject: string,
   component: React.ReactElement
 ): Promise<void> {
-  const transporter = getTransporter();
-
-  if (!transporter) {
-    console.warn(
-      "SMTP not configured (SMTP_HOST, SMTP_USER, SMTP_PASS). Skipping email to " + to
-    );
-    return;
-  }
+  const provider = getProvider();
 
   try {
     const html = await render(component);
-    const from = process.env.EMAIL_FROM || "SecureGate <noreply@securegate.app>";
+    console.log(`Sending email to ${to} via ${provider} — subject: ${subject}`);
 
-    console.log(`Sending email to ${to} with subject: ${subject}`);
-
-    const info = await transporter.sendMail({
-      from,
-      to,
-      subject,
-      html,
-    });
-
-    console.log(`Email sent successfully to ${to}:`, info.messageId);
+    if (provider === "resend") {
+      await sendViaResend(to, subject, html);
+    } else {
+      await sendViaNodemailer(to, subject, html);
+    }
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error);
     throw new Error(`Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`);

@@ -94,6 +94,7 @@ export function SignUpForm() {
           placeholder="At least 8 characters"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          showPasswordToggle
         />
         <PasswordStrength password={password} />
       </div>

@@ -62,6 +62,7 @@ export function LoginForm() {
         autoComplete="current-password"
         required
         placeholder="Enter your password"
+        showPasswordToggle
       />
       <Button type="submit" loading={loading}>
         Sign in

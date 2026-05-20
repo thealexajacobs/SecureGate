@@ -16,7 +16,7 @@ const nextConfig = {
     ];
   },
   experimental: {
-    serverComponentsExternalPackages: ["@prisma/client", "@prisma/adapter-pg"],
+    serverComponentsExternalPackages: ["@prisma/client"],
   },
 };
 

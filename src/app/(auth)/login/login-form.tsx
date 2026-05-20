@@ -30,9 +30,9 @@ export function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      if (result.code === "UnverifiedEmail") {
+      if (result.error === "UnverifiedEmail") {
         setError("Please verify your email before logging in.");
-      } else if (result.code === "RateLimited") {
+      } else if (result.error === "RateLimited") {
         setError("Too many attempts. Please try again in a few minutes.");
       } else {
         setError("Invalid email or password.");

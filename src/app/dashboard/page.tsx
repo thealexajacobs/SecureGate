@@ -23,7 +23,7 @@ export default async function DashboardPage() {
           >
             <button
               type="submit"
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+              className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
             >
               Sign out
             </button>
